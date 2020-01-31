@@ -188,7 +188,7 @@ func processAuction() {
         return auc.Endtime + 10
     }
     for player in playerIgnore {
-        if auc.highestBidder == player {
+        if auc.HighestBidder == player {
             LogInfo("This is a friend we cannot beat!")
             return refreshTime(auc.Endtime)
         }
