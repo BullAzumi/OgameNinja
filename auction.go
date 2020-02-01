@@ -36,6 +36,7 @@ tmpMet = 0
 tmpCrys = 0
 tmpDeut = 0
 highestBid = 0
+totalItems = 0
 celt = GetCachedCelestial(bidHome)
 if celt == nil {
     LogError(bidHome + " is not one of your planet/moon")
@@ -138,6 +139,8 @@ func didWon(auc) {
     if auc.HighestBidderUserID == ownPlayerID {
         LogInfo("You won the auction with " + Dotify(auc.CurrentBid) + " resources!")
         LogInfo(auc.CurrentItem + " has been added to your inventory!")
+        totalItems++
+        LogInfo("You won total " + totalItems)
     }
 }
 
