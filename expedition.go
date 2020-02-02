@@ -16,9 +16,9 @@
 //######################################## SETTINGS START ########################################
 
 
-home = "M:4:363:4"                                      //set your expo home
-sendFrom = 363                                          //system lower limit
-sendTo = 364                                            //system upper limit
+home = "M:1:234:5"                                      //set your expo home
+sendFrom = 224                                          //system lower limit
+sendTo = 244                                            //system upper limit
 rankOnePoints = 1234567890                              //how many points does the first place have
 smallCargo = false                                      //would you fly with small cargos? true = yes / false = no
 usePathfinder = true                                    //Use pathfinder in automatically build
