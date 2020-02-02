@@ -83,8 +83,10 @@ func sendMineDebris() {
                     f, err = sendDebris(PathfinderNeeded)
                     if err != nil {
                         LogError(err)
+                     break
                     }else {
                         LogInfo("Debris in work!")
+                     break
                     }
                 }else {
                     fleetsGet()
