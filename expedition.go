@@ -439,24 +439,24 @@ func LogTelegram(cat, message) {
         case cat == "W" || cat == "w":
             LogWarn(message)
             if useTelegram {
-                SendTelegram(TELEGRAM_CHAT_ID, "Warn! " + message)
+                SendTelegram(TELEGRAM_CHAT_ID, "Warn [" + message + "]")
             }
         case cat == "I" || cat == "i":
             LogInfo(message)
             if useTelegram {
-                SendTelegram(TELEGRAM_CHAT_ID, "Info! " + message)
+                SendTelegram(TELEGRAM_CHAT_ID, "Info [" + message + "]")
             }
         case cat == "E" || cat == "e":
             LogError(message)
             if useTelegram {
-                SendTelegram(TELEGRAM_CHAT_ID, "Error! " + message)
+                SendTelegram(TELEGRAM_CHAT_ID, "Error [" + message + "]")
             }
         case cat == "D" || cat == "d":
             LogDebug(message)
         default:
             LogError("no valid entry! Message is: " + message)
             if useTelegram {
-                SendTelegram(TELEGRAM_CHAT_ID, "Error! No valid entry! Message is: " + message)
+                SendTelegram(TELEGRAM_CHAT_ID, "Error [No valid entry! Message is: " + message + "]")
             }
     }
 }
