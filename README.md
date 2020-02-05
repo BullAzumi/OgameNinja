@@ -6,6 +6,11 @@ copy and paste it into your bot at ninja
 expeditions script
 
  * CHANGELOG
+ * V.1.22
+ * ADD Checking if there are enough ships
+ * FIX Maxium Slots
+ * V.1.21
+ * ADD Telegram notification
  * V.1.2
  * ADD mining debris if wave is used
  * FIX some bugs of sendFrom
