@@ -118,7 +118,7 @@ func scanGala() {
     }
     if systemInfo.ExpeditionDebris.PathfindersNeeded > 0 {
         LogTelegram("D", "Debris detected")
-        LogTelegram("D", "Need " + systemInfo.ExpeditionDebris.PathfindersNeeded + " Pathfinder")
+        LogTelegram("I", "Need " + systemInfo.ExpeditionDebris.PathfindersNeeded + " Pathfinder")
         return systemInfo.ExpeditionDebris
     }else {
         LogTelegram("D", "No Debris detected")
@@ -414,7 +414,7 @@ func setHartDebris() {
     LogTelegram("D", "Call function setHartDebris()")
 
     ships = NewShipsInfos()
-    switch LFandSC {
+    switch hartDebris {
     case LFandSC && sendAll:
         ships.Set(LIGHTFIGHTER, enoughtShips(LIGHTFIGHTER, 0))
         ships.Set(SMALLCARGO, enoughtShips(SMALLCARGO, 0))
@@ -439,7 +439,7 @@ func setHartDebris() {
         LogTelegram("I", "We add " + Dotify(LC) + " LargeCargos.") 
         HF = Ceil(enoughtShips(HEAVYFIGHTER, ((LC / 1.5) * maxSlotsUse)))
         ships.Set(HEAVYFIGHTER, HF)
-        LogTelegram("I", "We add " + Dotify(LF) + " HeavyFighters.")
+        LogTelegram("I", "We add " + Dotify(HF) + " HeavyFighters.")
         ships.Set(ESPIONAGEPROBE, enoughtShips(ESPIONAGEPROBE, 1 * maxSlotsUse))
         ships.Set(DESTROYER, enoughtShips(DESTROYER, 1 * maxSlotsUse))
         if usePathfinder {
