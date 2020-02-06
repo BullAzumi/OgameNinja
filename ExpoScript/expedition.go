@@ -523,13 +523,13 @@ func doWork(){
         
         doExpo()                                                                //send expo
         
-        checkLoop()                                                             //checking is loop when he is finished
-        
         if useWave && send {                                                    //wave tactics
             debrisSys = downSys
             downSys = setSys() 
         }
-
+        
+        checkLoop()                                                             //checking is loop when he is finished
+        
         customSleep(minSecs)                                                    //set sleeper
         
         sendMineDebris()                                                        //after sleep checking debris
