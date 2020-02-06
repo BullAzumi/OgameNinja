@@ -82,6 +82,7 @@ downSys = 0
 upSys = 0
 usedSlots = 0
 tech = GetResearch()
+loopDetect = true
 
 //debris functions
 func sendMineDebris() {
@@ -198,27 +199,42 @@ func setMinSecs() {
 }
 
 func setSys() {
-    if sendFrom < sendTo {
+    if sendFrom <= sendTo {
+        loopDetect = true
         return downSys++
     }else {
+        loopDetect = false
         return downSys--
     }
 }
 
 func checkLoop() {
-    if downSys == upSys + 1 {
-            if loop {
-                LogTelegram("I", "What a feeling! My mens and womens and myself think a lot about these expeditions!")
-                LogTelegram("I", "But there is still so much unknown in these galaxies.")
-                LogTelegram("I", "We have to explore the sectors again! Time was running out! On another round!")
-                downSys = sendFrom
-            }else {
-                LogTelegram("I", "It was an honor to explore this unknown vastness of the galaxies!")
-                LogTelegram("I", "But our troops need to recover! The ships have to be brought up to scratch again.")
-                LogTelegram("I", "We thank the entire team for this excellent work and say goodbye for now!")
-                StopScript(__FILE__)
-            }
+    if downSys == upSys + 1 && loopDetect {
+        if loop {
+            LogTelegram("I", "What a feeling! My mens and womens and myself think a lot about these expeditions!")
+            LogTelegram("I", "But there is still so much unknown in these galaxies.")
+            LogTelegram("I", "We have to explore the sectors again! Time was running out! On another round!")
+            downSys = sendFrom
+        }else {
+            LogTelegram("I", "It was an honor to explore this unknown vastness of the galaxies!")
+            LogTelegram("I", "But our troops need to recover! The ships have to be brought up to scratch again.")
+            LogTelegram("I", "We thank the entire team for this excellent work and say goodbye for now!")
+            StopScript(__FILE__)
         }
+    }
+    if downSys == upSys - 1 && !loopDetect {
+        if loop {
+            LogTelegram("I", "What a feeling! My mens and womens and myself think a lot about these expeditions!")
+            LogTelegram("I", "But there is still so much unknown in these galaxies.")
+            LogTelegram("I", "We have to explore the sectors again! Time was running out! On another round!")
+            downSys = sendFrom
+        }else {
+            LogTelegram("I", "It was an honor to explore this unknown vastness of the galaxies!")
+            LogTelegram("I", "But our troops need to recover! The ships have to be brought up to scratch again.")
+            LogTelegram("I", "We thank the entire team for this excellent work and say goodbye for now!")
+            StopScript(__FILE__)
+        }
+    }
 }
 
 func customSleep(sleepTime) {
