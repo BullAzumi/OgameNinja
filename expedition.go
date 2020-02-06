@@ -3,7 +3,7 @@
  */
  
 /*
- * VERSION 1.22
+ * VERSION 1.24
  */
 
 /* DESCRIPTION
@@ -11,6 +11,7 @@
  * You can decide whether to choose the ship automatically or by yourself.
  * If you don't have enough ships on the planet / moon, he will send the number of waves divided or set it to 0
  * notifies you of Telegram
+ * It's possible you're targeting debris fields
  */
 
 /*---------------------------------------------------------------------------------------------------------------------------*/
@@ -53,6 +54,13 @@ ship = {LIGHTFIGHTER : 0 ,
         ESPIONAGEPROBE : 0 ,
         REAPER : 0 ,
         PATHFINDER : 0}
+//########################## !!!CHANGE IT ONLY IF YOU KNOW WHAT YOU ARE DOING!!! ###########################
+
+hartDebris = false                                       //set this true do get hart Debris farm
+sendAll = false                                          //true = all fleets (set up below) you have are divided by the maxSlots value
+                                                         //false = eine kalkulierte flotte die du unten eingestellt hast werden gesendet
+
+LFandSC = true                                           //true = use light fighters and small cargos / false = use heavy fighters and large cargos
 
 //######################################## SETTINGS END ########################################
 
@@ -73,6 +81,7 @@ debrisSys = 0
 downSys = 0
 upSys = 0
 usedSlots = 0
+tech = GetResearch()
 
 //debris functions
 func sendMineDebris() {
@@ -312,7 +321,12 @@ func enoughtShips(shipNames, shipAmounts) {
         LogTelegram("E", sErr)
         StopScript(__FILE__)
     }else {
-        if eShips.ByID(shipNames) < shipAmounts {
+        if sendAll && hartDebris {
+            shipsMax = Floor(eShips.ByID(shipNames) / maxSlotsUse)
+            LogTelegram("D", "Send " + Dotify(shipsMax) + " " + ID2Str(shipNames) + " per wave")
+            return shipsMax
+        }
+    if eShips.ByID(shipNames) < shipAmounts {
             LogTelegram("W", "Not enought " + ID2Str(shipNames))
             shipsMax = Floor(eShips.ByID(shipNames) / maxSlotsUse)
             LogTelegram("W", "We set it do " + shipsMax + " " + ID2Str(shipNames))
@@ -343,72 +357,34 @@ func shipsSet() {
     }else {
         LogTelegram("I", "Automatically settings are adopted!")
         
+        expoValue = 0
+
         switch rankOnePoints {
-        case rankOnePoints >= 100000000:
-            if IsDiscoverer() {
-                SC = 1250 * speed
-                LC = 417 * speed
-            }else {
-                SC = 1250
-                LC = 417
-            }
-        case rankOnePoints >= 75000000:
-            if IsDiscoverer() {
-                SC = 1050 * speed
-                LC = 350 * speed
-            }else {
-                SC = 1050
-                LC = 350
-            }
-        case rankOnePoints >= 50000000:
-            if IsDiscoverer() {
-                SC = 900 * speed
-                LC = 300 * speed
-            }else {
-                SC = 900
-                LC = 300
-            }
-        case rankOnePoints >= 25000000:
-            if IsDiscoverer() {
-                SC = 750 * speed
-                LC = 250 * speed
-            }else {
-                SC = 750
-                LC = 250
-            }
-        case rankOnePoints >= 5000000:
-            if IsDiscoverer() {
-                SC = 600 * speed
-                LC = 200 * speed
-            }else {
-                SC = 600
-                LC = 200
-            }
-        case rankOnePoints >= 1000000:
-            if IsDiscoverer() {
-                SC = 450 * speed
-                LC = 150 * speed
-            }else {
-                SC = 450
-                LC = 150
-            }
-        case rankOnePoints >= 100000:
-            if IsDiscoverer() {
-                SC = 300 * speed
-                LC = 100 * speed
-            }else {
-                SC = 300
-                LC = 100
-            }
-        case rankOnePoints >= 0:
-            if IsDiscoverer() {
-                SC = 125 * speed
-                LC = 42 * speed
-            }else {
-                SC = 125
-                LC = 42
-            }
-    }
+            case rankOnePoints >= 100000000:
+                expoValue = 25000
+            case rankOnePoints >= 75000000:
+                expoValue = 21000
+            case rankOnePoints >= 50000000:
+                expoValue = 18000
+            case rankOnePoints >= 25000000:
+                expoValue = 15000
+            case rankOnePoints >= 5000000:
+                expoValue = 12000
+            case rankOnePoints >= 1000000:
+                expoValue = 9000
+            case rankOnePoints >= 100000:
+                expoValue = 6000
+            case rankOnePoints >= 0:
+                expoValue = 2400
+        }
+        if IsDiscoverer() {
+            SC = Ceil((expoValue * speed * 1.5 * 2 * 200) / (5000 * (tech.HyperspaceTechnology * 0.05) + 1))
+            LC = Ceil((expoValue * speed * 1.5 * 2 * 200) / (25000 * (tech.HyperspaceTechnology * 0.05) + 1))
+        }else {
+            SC = Ceil((expoValue * 2 * 200) / (5000 * (tech.HyperspaceTechnology * 0.05) + 1))
+            LC = Ceil((expoValue * 2 * 200) / (25000 * (tech.HyperspaceTechnology * 0.05) + 1))
+        }
+
         ships = NewShipsInfos()
         if smallCargo {
             tmp = enoughtShips(SMALLCARGO, SC * maxSlotsUse)
@@ -430,6 +406,44 @@ func shipsSet() {
         if ships.ByID(SMALLCARGO) <= 0 && ships.ByID(LARGECARGO) <= 0 {
             LogTelegram("E", "No Caros set!")
             StopScript(__FILE__)
+        }
+    }
+}
+
+func setHartDebris() {
+    LogTelegram("D", "Call function setHartDebris()")
+
+    ships = NewShipsInfos()
+    switch LFandSC {
+    case LFandSC && sendAll:
+        ships.Set(LIGHTFIGHTER, enoughtShips(LIGHTFIGHTER, 0))
+        ships.Set(SMALLCARGO, enoughtShips(SMALLCARGO, 0))
+    case !LFandSC && sendAll:
+        ships.Set(HEAVYFIGHTER, enoughtShips(HEAVYFIGHTER, 0))
+        ships.Set(LARGECARGO, enoughtShips(LARGECARGO, 0))
+    case LFandSC && !sendAll:
+        SC = enoughtShips(SMALLCARGO, 999999 * maxSlotsUse)
+        LogTelegram("I", "We add " + Dotify(SC) + " SmallCargos.") 
+        ships.Set(SMALLCARGO, SC)
+        LF = Ceil(enoughtShips(LIGHTFIGHTER, ((SC / 2) * maxSlotsUse)))
+        ships.Set(LIGHTFIGHTER, LF)
+        LogTelegram("I", "We add " + Dotify(LF) + " LightFighters.")
+        ships.Set(ESPIONAGEPROBE, enoughtShips(ESPIONAGEPROBE, 1 * maxSlotsUse))
+        ships.Set(DESTROYER, enoughtShips(DESTROYER, 1 * maxSlotsUse))
+        if usePathfinder {
+            ships.Set(PATHFINDER, enoughtShips(PATHFINDER, 1 * maxSlotsUse))
+        }
+    case !LFandSC && !sendAll:
+        LC = enoughtShips(LARGECARGO, 999999 * maxSlotsUse)
+        ships.Set(LARGECARGO, LC)
+        LogTelegram("I", "We add " + Dotify(LC) + " LargeCargos.") 
+        HF = Ceil(enoughtShips(HEAVYFIGHTER, ((LC / 1.5) * maxSlotsUse)))
+        ships.Set(HEAVYFIGHTER, HF)
+        LogTelegram("I", "We add " + Dotify(LF) + " HeavyFighters.")
+        ships.Set(ESPIONAGEPROBE, enoughtShips(ESPIONAGEPROBE, 1 * maxSlotsUse))
+        ships.Set(DESTROYER, enoughtShips(DESTROYER, 1 * maxSlotsUse))
+        if usePathfinder {
+            ships.Set(PATHFINDER, enoughtShips(PATHFINDER, 1 * maxSlotsUse))
         }
     }
 }
@@ -475,7 +489,12 @@ func doWork(){
     }
 
     GalaxyGet()                                                                 //get the Galaxy form home
-    shipsSet()                                                                  //set Ships automatically or manual
+    
+    if hartDebris {
+        setHartDebris()                                                         //set Ships automatically or manual for get the hartest debris
+    }else {
+        shipsSet()                                                              //set Ships automatically or manual
+    }
     
     for {
         fleetsGet()                                                             //get slots
