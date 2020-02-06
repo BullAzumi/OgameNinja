@@ -6,6 +6,10 @@ copy and paste it into your bot at ninja
 expeditions script
 
  * CHANGELOG
+ * V.1.24
+ * ADD you can now prioritize debris fields
+ * V.1.23
+ * FIX automatic calculations thanks to "Anonymous"
  * V.1.22
  * ADD Checking if there are enough ships
  * FIX Maxium Slots
