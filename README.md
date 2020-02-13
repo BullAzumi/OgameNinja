@@ -6,6 +6,12 @@ copy and paste it into your bot at ninja
 expeditions script
 
  * CHANGELOG
+ * V.1.30
+ * FIX Review period
+ * FIX fleet calculations
+ * ADD radius
+ * ADD Reapers can now replace Destroyers
+ * FIX Derbis will be mined now only once
  * V.1.24
  * ADD you can now prioritize debris fields
  * V.1.23
