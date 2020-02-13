@@ -58,7 +58,6 @@ If you want to fly normal expeditions, you only have to set the following variab
 
 Everything else is done and checked by the script.
 In this sense I wish you a lot of fun and success with this script!
-*** Translated with www.DeepL.com/Translator (free version) ***
 
 
 
