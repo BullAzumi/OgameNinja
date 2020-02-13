@@ -3,7 +3,7 @@
  */
  
 /*
- * VERSION 1.24
+ * VERSION 1.30
  */
 
 /* DESCRIPTION
@@ -20,19 +20,19 @@
 
 
 home = "M:1:234:5"                                      //set your expo home
-sendFrom = 233                                          //system lower limit
-sendTo = 235                                            //system upper limit
+radius = 0                                              //set a radius, this will be flown around your system. If radius = 0 then we only fly in your system
 rankOnePoints = 1234567890                              //how many points does the first place have
-smallCargo = false                                      //would you fly with small cargos? true = yes / false = no
-usePathfinder = true                                    //Use pathfinder in automatically build
-HeavyFighter = true                                     //should add HeavyFighters? yes = true / no = false we would use 3.000 HeavyFighters
 maxSlotsUse = 1                                         //how many slots should we use?
-loop = false                                            //should we fly every round again?
+loop = true                                             //should we fly every round again?
 expoTime = 1                                            //set duration
-selfShips = false                                       //assemble the ships yourself or have them calculated automatically true = self / false = automatic
 useWave = true                                          //should we let everyone fly on a coordinate and only then switch? true = yes / false = no
-ignoreFleets = false                                    //ignores fleets are on move true = yes / false = no
-useTelegram = true                                      //should we notify you on telegram? true = yes / false = no
+useTelegram = false                                     //should we notify you on telegram? true = yes / false = no
+smallCargo = false                                      //would you fly with small cargos? true = yes / false = no
+usePathfinder = true                                    //use pathfinder in automatically build
+useReaper = false                                       //ture = use reaoer in automatically build / false = use destroyer
+HeavyFighter = true                                     //should add HeavyFighters? yes = true / no = false we would use 3.000 HeavyFighters
+selfShips = false                                       //assemble the ships yourself or have them calculated automatically true = self / false = automatic
+TeleID = TELEGRAM_CHAT_ID                               //you can exchange this for an ID for a possible second account (CloudHost only)
 
 //!!!ONLY WORKS IF useWave IS TRUE!!!
 mineDebris = true                                       //should we mine debris fields? true = yes / false = no
@@ -56,16 +56,13 @@ ship = {LIGHTFIGHTER : 0 ,
         PATHFINDER : 0}
 //########################## !!!CHANGE IT ONLY IF YOU KNOW WHAT YOU ARE DOING!!! ###########################
 
-hartDebris = false                                       //set this true do get hart Debris farm
-sendAll = false                                          //true = all fleets (set up below) you have are divided by the maxSlots value
-                                                         //false = eine kalkulierte flotte die du unten eingestellt hast werden gesendet
-
-LFandSC = true                                           //true = use light fighters and small cargos / false = use heavy fighters and large cargos
+hartDebris = true                                       //set this true do get hart Debris farm
+LFandSC = false                                         //true = use light fighters and small cargos / false = use heavy fighters and large cargos
 
 //######################################## SETTINGS END ########################################
 
 
-speed = GetServer().Settings.EconomySpeed
+speed = 0
 myGalaxy = 0
 SC = 0
 LC = 0
@@ -73,7 +70,7 @@ ships = {}
 expoSlots = 0
 expoInUse = 0
 freeSlots = 0
-reserved = GetFleetSlotsReserved()
+reserved = 0
 fleets = {}
 send = true
 minSecs = 0
@@ -81,25 +78,60 @@ debrisSys = 0
 downSys = 0
 upSys = 0
 usedSlots = 0
-tech = GetResearch()
-loopDetect = true
+tech = {}
+doneDebris = false
+
+func boot() {
+    LogTelegram("D", "Program starts. Please be patient!")
+    errorHandler()
+    Sleep(750)
+
+    speed = GetServer().Settings.EconomySpeed
+    LogTelegram("D", "Server Economy Speed are " + speed)
+    Sleep(250)
+
+    myGalaxy = GetCachedCelestial(home).Coordinate.Galaxy
+    LogTelegram("D", "Galaxy was set to " + myGalaxy)
+    Sleep(250)
+
+    reserved = GetFleetSlotsReserved()
+    LogTelegram("D", "reserved player slots were detected " + reserved)
+    Sleep(250)
+
+    tech = GetResearch()
+    LogTelegram("D", "Research was received")
+    Sleep(250)
+
+    startShips, err = GetCachedCelestial(home).GetShips()
+    LogTelegram("D", "read out ships, for possible calculations")
+    Sleep(250)
+    
+    if err != nil {
+        LogTelegram("E", err)
+        StopScript(__FILE__)
+    }else {
+        SC = Floor(startShips.SmallCargo / maxSlotsUse)
+        LC = Floor(startShips.LargeCargo / maxSlotsUse)
+    }
+}
 
 //debris functions
 func sendMineDebris() {
     LogTelegram("D", "Call function sendMineDebris()")
     if mineDebris && send && useWave {
-        debris = scanGala()
+        debris, already = scanGala()
         fleetsGet()
-        if debris.PathfindersNeeded > 0 {
-            LogTelegram("I", debris.Metal + " metal" + debris.Crystal + " crystal were found!")
+        if debris.PathfindersNeeded > 0 && !doneDebris {
+            LogTelegram("I", Dotify(debris.Metal) + " metal" + Dotify(debris.Crystal) + " crystal were found!")
             for {
                 if usedSlots < maxSlotsUse && freeSlots > 0 {
-                    f, err = sendDebris(debris.PathfindersNeeded)
+                    f, err = sendDebris(debris.PathfindersNeeded - already)
                     if err != nil {
                         LogTelegram("E", err)
                         break
                     }else {
-                        LogTelegram("I", "Debris in work!")
+                        send = false
+                        fleetsGet()
                         break
                     }
                 }else {
@@ -119,11 +151,33 @@ func scanGala() {
     }
     if systemInfo.ExpeditionDebris.PathfindersNeeded > 0 {
         LogTelegram("D", "Debris detected")
-        LogTelegram("I", "Need " + systemInfo.ExpeditionDebris.PathfindersNeeded + " Pathfinder")
-        return systemInfo.ExpeditionDebris
+        LogTelegram("I", "Need " + Dotify(systemInfo.ExpeditionDebris.PathfindersNeeded) + " Pathfinder")
+        already = onWayDebris(systemInfo.ExpeditionDebris.PathfindersNeeded)
+        return systemInfo.ExpeditionDebris, already
     }else {
         LogTelegram("D", "No Debris detected")
-        return systemInfo.ExpeditionDebris 
+        already = onWayDebris(systemInfo.ExpeditionDebris.PathfindersNeeded)
+        return systemInfo.ExpeditionDebris, already
+    }
+}
+
+func onWayDebris(PF) {
+    onWay = 0
+    already = 0
+    fleetsGet()
+    for fleet in fleets {
+        if fleet.Destination == NewCoordinate(MyGalaxy, debrisSys, 16, DEBRIS_TYPE) && fleet.Ships.Pathfinder == 12 && !fleet.ReturnFlight {
+            onWay++
+            already += fleet.Ships.Pathfinder
+        }
+    }
+    
+    if onWay == 0 {
+        doneDebris = false
+        return already
+    }else {
+        doneDebris = true
+        return already
     }
 }
 
@@ -142,29 +196,21 @@ func sendDebris(shipCounter) {
 //expeditions function
 func doExpo() {
     send = false
-    for usedSlots < maxSlotsUse{
-        for {
-            if expoInUse < expoSlots && freeSlots > 0 {
-                break;
-            }
-            fleetsGet()
-        }
+    for usedSlots < maxSlotsUse && expoInUse < expoSlots && freeSlots > 0 {
         if downSys <= upSys || downSys > upSys {
             newFleet, err = sendExpo()
             if err != nil {
                 LogTelegram("E", "Fleet reports errors: " + err)
                 send = false
-                continue
+                fleetsGet()
+                setMinSecs()
+                break
             }else{
                 LogTelegram("I", "Fleet starts on the expedition! " + newFleet)
-                if minSecs < newFleet.BackIn {
-                    minSecs = newFleet.BackIn
-                }
                 fleetsGet()
                 send = true
                 if !useWave {
-                    debrisSys = downSys
-                    downSys = setSys()
+                    setSys()
                 }
                 Sleep(Random(3,7)*1000)
             }
@@ -179,7 +225,6 @@ func sendExpo() {
     fleet = NewFleet()
     fleet.SetOrigin(home)
     fleet.SetDestination(sTo)
-    LogTelegram("I", "Coords set to " + sTo )
     fleet.SetSpeed(HUNDRED_PERCENT)
     fleet.SetMission(EXPEDITION)
     fleet.SetShips(*ships)
@@ -189,49 +234,26 @@ func sendExpo() {
 
 func setMinSecs() {
     LogTelegram("D", "Call function setMinSecs()")
+    minSecs = 999999999
     for fleet in fleets {
-        if fleet.Mission == EXPEDITION {
-            if minSecs < fleet.BackIn {
-                minSecs = fleet.BackIn
-            }
+        if fleet.Mission == EXPEDITION || fleet.Mission == RECYCLEDEBRISFIELD {
+            minSecs = Min(fleet.BackIn, minSecs)
         }
     }
 }
 
 func setSys() {
-    if sendFrom <= sendTo {
-        loopDetect = true
-        return downSys++
-    }else {
-        loopDetect = false
-        return downSys--
-    }
+    debrisSys = downSys
+    downSys++
 }
 
 func checkLoop() {
-    if downSys == upSys + 1 && loopDetect {
+    if downSys == upSys + 1{
         if loop {
-            LogTelegram("I", "What a feeling! My mens and womens and myself think a lot about these expeditions!")
-            LogTelegram("I", "But there is still so much unknown in these galaxies.")
-            LogTelegram("I", "We have to explore the sectors again! Time was running out! On another round!")
-            downSys = sendFrom
+            LogTelegram("D", "Loop is active! We'll start again from the beginning!")
+            downSys = GetCachedCelestial(home).Coordinate.System - radius
         }else {
-            LogTelegram("I", "It was an honor to explore this unknown vastness of the galaxies!")
-            LogTelegram("I", "But our troops need to recover! The ships have to be brought up to scratch again.")
-            LogTelegram("I", "We thank the entire team for this excellent work and say goodbye for now!")
-            StopScript(__FILE__)
-        }
-    }
-    if downSys == upSys - 1 && !loopDetect {
-        if loop {
-            LogTelegram("I", "What a feeling! My mens and womens and myself think a lot about these expeditions!")
-            LogTelegram("I", "But there is still so much unknown in these galaxies.")
-            LogTelegram("I", "We have to explore the sectors again! Time was running out! On another round!")
-            downSys = sendFrom
-        }else {
-            LogTelegram("I", "It was an honor to explore this unknown vastness of the galaxies!")
-            LogTelegram("I", "But our troops need to recover! The ships have to be brought up to scratch again.")
-            LogTelegram("I", "We thank the entire team for this excellent work and say goodbye for now!")
+            LogTelegram("I", "All done! We're out of here!")
             StopScript(__FILE__)
         }
     }
@@ -267,20 +289,15 @@ func errorHandler(){
         LogTelegram("E", home + " is not one of your planet/moon")
         StopScript(__FILE__)
     }
-    if sendFrom == 0 || sendFrom == nil {
-        LogTelegram("E", sendFrom + " is not a system that we can find")
-        StopScript(__FILE__)
+    downSys = GetCachedCelestial(home).Coordinate.System - radius
+    upSys = GetCachedCelestial(home).Coordinate.System + radius
+    if downSys <= 0 {
+        LogTelegram("D", "Radius exceeds system limit! Set it to 1 ")
+        downSys = 1
     }
-    if sys > 499{
-        if sendTo > 550 || sendTo == nil{
-            LogTelegram("E", sendTo + " is not a system that we can find")
-            StopScript(__FILE__)
-        }
-    }else {
-        if sendTo > 499 || sendTo == nil{
-            LogTelegram("E", sendTo + " is not a system that we can find")
-            StopScript(__FILE__)
-        }
+    if upSys >= 500 {
+        LogTelegram("D", "Radius exceeds system limit! Set it to 499")
+        upSys = 499
     }
     if rankOnePoints == 0 || rankOnePoints == nil{
         LogTelegram("E", "We do not believe that the first place has " + rankOnePoints + " points. We at least set it at our level")
@@ -302,9 +319,13 @@ func errorHandler(){
         }
     }
     if useTelegram {
-        if TELEGRAM_CHAT_ID == nil || TELEGRAM_CHAT_ID == 0 {
+        if TeleID == nil || TeleID == 0 {
             LogTelegram("W", "your Telegram ID is not set!")
         }
+    }
+    if selfShips && hartDebris {
+        LogTelegram("E", "it is not possible to have selfShips and hardDebris set true at the same time")
+        StopScript(__FILE__)
     }
 }
 
@@ -319,36 +340,20 @@ func startExpo() {
     return t
 }
 
-func GalaxyGet() {
-    LogTelegram("D", "Call function GalaxyGet()")
-    myPlanet, err = GetCelestial(home)
-    myGalaxy = myPlanet.Coordinate.Galaxy
-    LogTelegram("D", "Galaxy " + myGalaxy + " was set Sir!")
-}
-
 func enoughtShips(shipNames, shipAmounts) {
-    celt, cErr = GetCelestial(home)
-    if cErr != nil {
-        LogTelegram("E", cErr)
-        StopScript(__FILE__)
-    }
-    eShips, sErr = celt.GetShips()
+
+    eShips, sErr = GetCachedCelestial(home).GetShips()
     if sErr != nil {
         LogTelegram("E", sErr)
         StopScript(__FILE__)
     }else {
-        if sendAll && hartDebris {
-            shipsMax = Floor(eShips.ByID(shipNames) / maxSlotsUse)
-            LogTelegram("D", "Send " + Dotify(shipsMax) + " " + ID2Str(shipNames) + " per wave")
-            return shipsMax
-        }
-    if eShips.ByID(shipNames) < shipAmounts {
-            LogTelegram("W", "Not enought " + ID2Str(shipNames))
-            shipsMax = Floor(eShips.ByID(shipNames) / maxSlotsUse)
-            LogTelegram("W", "We set it do " + shipsMax + " " + ID2Str(shipNames))
+        if eShips.ByID(shipNames) < shipAmounts {
+            LogTelegram("D", "Not enought " + ID2Str(shipNames))
+            shipsMax = Floor(eShips.ByID(shipNames) / (maxSlotsUse - usedSlots))
+            LogTelegram("D", "We set it do " + shipsMax + " " + ID2Str(shipNames))
             return shipsMax
         }else {
-            shipsMax = shipAmounts / maxSlotsUse
+            shipsMax = shipAmounts / (maxSlotsUse - usedSlots)
             return shipsMax
         }
     }
@@ -356,112 +361,134 @@ func enoughtShips(shipNames, shipAmounts) {
 
 func shipsSet() {
     LogTelegram("D", "Call function shipsSet()")
+
     if selfShips {
-        LogTelegram("I", "Manual settings are adopted!")
-        ships = NewShipsInfos()
-        for shipName, shipAmount in ship {
-            if shipAmount != 0 {
-                amount = enoughtShips(shipName, shipAmount * maxSlotsUse)
-                if amount > 0 {
-                    ships.Set(shipName, amount)
-                }else {
-                    LogTelegram("E", "Not enought " + ID2Str(shipName))
-                }
-            }
-        }
-        LogTelegram("I", "The following ships have been imported: " + ships)
-    }else {
-        LogTelegram("I", "Automatically settings are adopted!")
-        
-        expoValue = 0
-
-        switch rankOnePoints {
-            case rankOnePoints >= 100000000:
-                expoValue = 25000
-            case rankOnePoints >= 75000000:
-                expoValue = 21000
-            case rankOnePoints >= 50000000:
-                expoValue = 18000
-            case rankOnePoints >= 25000000:
-                expoValue = 15000
-            case rankOnePoints >= 5000000:
-                expoValue = 12000
-            case rankOnePoints >= 1000000:
-                expoValue = 9000
-            case rankOnePoints >= 100000:
-                expoValue = 6000
-            case rankOnePoints >= 0:
-                expoValue = 2400
-        }
-        if IsDiscoverer() {
-            SC = Ceil((expoValue * speed * 1.5 * 2 * 200) / (5000 * (tech.HyperspaceTechnology * 0.05) + 1))
-            LC = Ceil((expoValue * speed * 1.5 * 2 * 200) / (25000 * (tech.HyperspaceTechnology * 0.05) + 1))
-        }else {
-            SC = Ceil((expoValue * 2 * 200) / (5000 * (tech.HyperspaceTechnology * 0.05) + 1))
-            LC = Ceil((expoValue * 2 * 200) / (25000 * (tech.HyperspaceTechnology * 0.05) + 1))
-        }
-
-        ships = NewShipsInfos()
-        if smallCargo {
-            tmp = enoughtShips(SMALLCARGO, SC * maxSlotsUse)
-            ships.Set(SMALLCARGO, tmp)
-            LogTelegram("I", "Add " + tmp + " small cargos")
-        }else {
-            tmp = enoughtShips(LARGECARGO, LC * maxSlotsUse)
-            ships.Set(LARGECARGO, tmp)
-            LogTelegram("I", "Add " + tmp + " large cargos")
-        }
-        ships.Set(ESPIONAGEPROBE, enoughtShips(ESPIONAGEPROBE, 1 * maxSlotsUse))
-        ships.Set(DESTROYER, enoughtShips(DESTROYER, 1 * maxSlotsUse))
-        if usePathfinder {
-            ships.Set(PATHFINDER, enoughtShips(PATHFINDER, 1 * maxSlotsUse))
-        }
-        if HeavyFighter {
-            ships.Set(HEAVYFIGHTER, enoughtShips(HEAVYFIGHTER, 3000 * maxSlotsUse))
-        }
-        if ships.ByID(SMALLCARGO) <= 0 && ships.ByID(LARGECARGO) <= 0 {
-            LogTelegram("E", "No Caros set!")
-            StopScript(__FILE__)
-        }
+        manualSet()
+    }
+    if !selfShips && !hartDebris{
+        autoSet()
+    }
+    if hartDebris {
+        setHartDebris()
     }
 }
 
 func setHartDebris() {
-    LogTelegram("D", "Call function setHartDebris()")
-
+    LogTelegram("D", "Hart Debris settings are adopted!")
+    fleetsGet()
     ships = NewShipsInfos()
-    switch hartDebris {
-    case LFandSC && sendAll:
-        ships.Set(LIGHTFIGHTER, enoughtShips(LIGHTFIGHTER, 0))
-        ships.Set(SMALLCARGO, enoughtShips(SMALLCARGO, 0))
-    case !LFandSC && sendAll:
-        ships.Set(HEAVYFIGHTER, enoughtShips(HEAVYFIGHTER, 0))
-        ships.Set(LARGECARGO, enoughtShips(LARGECARGO, 0))
-    case LFandSC && !sendAll:
-        SC = enoughtShips(SMALLCARGO, 999999 * maxSlotsUse)
+    if LFandSC {
+        SC = enoughtShips(SMALLCARGO, SC * (maxSlotsUse - usedSlots))
+        LF = Ceil(enoughtShips(LIGHTFIGHTER, ((SC / 2) * (maxSlotsUse - usedSlots))))
+
         LogTelegram("I", "We add " + Dotify(SC) + " SmallCargos.") 
-        ships.Set(SMALLCARGO, SC)
-        LF = Ceil(enoughtShips(LIGHTFIGHTER, ((SC / 2) * maxSlotsUse)))
-        ships.Set(LIGHTFIGHTER, LF)
         LogTelegram("I", "We add " + Dotify(LF) + " LightFighters.")
-        ships.Set(ESPIONAGEPROBE, enoughtShips(ESPIONAGEPROBE, 1 * maxSlotsUse))
-        ships.Set(DESTROYER, enoughtShips(DESTROYER, 1 * maxSlotsUse))
-        if usePathfinder {
-            ships.Set(PATHFINDER, enoughtShips(PATHFINDER, 1 * maxSlotsUse))
+
+        ships.Set(SMALLCARGO, SC)
+        ships.Set(LIGHTFIGHTER, LF)
+        ships.Set(ESPIONAGEPROBE, enoughtShips(ESPIONAGEPROBE, 1 * (maxSlotsUse - usedSlots)))
+        if useReaper {
+            ships.Set(REAPER, enoughtShips(REAPER, 1 * (maxSlotsUse - usedSlots)))
+        }else {
+            ships.Set(DESTROYER, enoughtShips(DESTROYER, 1 * (maxSlotsUse - usedSlots)))
         }
-    case !LFandSC && !sendAll:
-        LC = enoughtShips(LARGECARGO, 999999 * maxSlotsUse)
-        ships.Set(LARGECARGO, LC)
-        LogTelegram("I", "We add " + Dotify(LC) + " LargeCargos.") 
-        HF = Ceil(enoughtShips(HEAVYFIGHTER, ((LC / 1.5) * maxSlotsUse)))
-        ships.Set(HEAVYFIGHTER, HF)
-        LogTelegram("I", "We add " + Dotify(HF) + " HeavyFighters.")
-        ships.Set(ESPIONAGEPROBE, enoughtShips(ESPIONAGEPROBE, 1 * maxSlotsUse))
-        ships.Set(DESTROYER, enoughtShips(DESTROYER, 1 * maxSlotsUse))
         if usePathfinder {
-            ships.Set(PATHFINDER, enoughtShips(PATHFINDER, 1 * maxSlotsUse))
+            ships.Set(PATHFINDER, enoughtShips(PATHFINDER, 1 * (maxSlotsUse - usedSlots)))
+        }
+    }else {
+        LC = enoughtShips(LARGECARGO, LC * (maxSlotsUse - usedSlots))
+        HF = Ceil(enoughtShips(HEAVYFIGHTER, ((LC / 1.5) * (maxSlotsUse - usedSlots))))
+
+        LogTelegram("I", "We add " + Dotify(LC) + " LargeCargos.")
+        LogTelegram("I", "We add " + Dotify(HF) + " HeavyFighters.")
+
+        ships.Set(HEAVYFIGHTER, HF)
+        ships.Set(LARGECARGO, LC)
+        ships.Set(ESPIONAGEPROBE, enoughtShips(ESPIONAGEPROBE, 1 * (maxSlotsUse - usedSlots)))
+        if useReaper {
+            ships.Set(REAPER, enoughtShips(REAPER, 1 * (maxSlotsUse - usedSlots)))
+        }else {
+            ships.Set(DESTROYER, enoughtShips(DESTROYER, 1 * (maxSlotsUse - usedSlots)))
+        }
+        if usePathfinder {
+            ships.Set(PATHFINDER, enoughtShips(PATHFINDER, 1 * (maxSlotsUse - usedSlots)))
         }
     }
+}
+
+func manualSet() {
+    LogTelegram("D", "Manual settings are adopted!")
+    fleetsGet()
+    ships = NewShipsInfos()
+    for shipName, shipAmount in ship {
+        if shipAmount != 0 { 
+            amount = enoughtShips(shipName, shipAmount * (maxSlotsUse - usedSlots))
+            if amount > 0 {
+                ships.Set(shipName, amount)
+            }else {
+                LogTelegram("E", "Not enought " + ID2Str(shipName))
+            }
+        }
+    }
+    LogTelegram("I", "The following ships have been imported: " + ships)
+}
+
+func autoSet() {
+    LogTelegram("D", "Automatically settings are adopted!")
+    fleetsGet()
+    expoValue = 0
+    ships = NewShipsInfos()
+    switch rankOnePoints {
+        case rankOnePoints >= 100000000:
+            expoValue = 25000
+        case rankOnePoints >= 75000000:
+            expoValue = 21000
+        case rankOnePoints >= 50000000:
+            expoValue = 18000
+        case rankOnePoints >= 25000000:
+            expoValue = 15000
+        case rankOnePoints >= 5000000:
+            expoValue = 12000
+        case rankOnePoints >= 1000000:
+            expoValue = 9000
+        case rankOnePoints >= 100000:
+            expoValue = 6000
+        case rankOnePoints >= 0:
+            expoValue = 2400
+    }
+    if IsDiscoverer() {
+        SC = Ceil((expoValue * speed * 1.5 * 2 * 200) / (5000 * (tech.HyperspaceTechnology * 0.05) + 1))
+        LC = Ceil((expoValue * speed * 1.5 * 2 * 200) / (25000 * (tech.HyperspaceTechnology * 0.05) + 1))
+    }else {
+        SC = Ceil((expoValue * 2 * 200) / (5000 * (tech.HyperspaceTechnology * 0.05) + 1))
+        LC = Ceil((expoValue * 2 * 200) / (25000 * (tech.HyperspaceTechnology * 0.05) + 1))
+    }
+    ships = NewShipsInfos()
+    if smallCargo {
+        tmp = enoughtShips(SMALLCARGO, SC * (maxSlotsUse - usedSlots))
+        ships.Set(SMALLCARGO, tmp)
+        LogTelegram("I", "Add " + tmp + " small cargos")
+    }else {
+        tmp = enoughtShips(LARGECARGO, LC * (maxSlotsUse - usedSlots))
+        ships.Set(LARGECARGO, tmp)
+        LogTelegram("I", "Add " + tmp + " large cargos")
+    }
+    ships.Set(ESPIONAGEPROBE, enoughtShips(ESPIONAGEPROBE, 1 * (maxSlotsUse - usedSlots)))
+    if useReaper {
+        ships.Set(REAPER, enoughtShips(REAPER, 1 * (maxSlotsUse - usedSlots)))
+    }else {
+        ships.Set(DESTROYER, enoughtShips(DESTROYER, 1 * (maxSlotsUse - usedSlots)))
+    }
+    if usePathfinder {
+        ships.Set(PATHFINDER, enoughtShips(PATHFINDER, 1 * (maxSlotsUse - usedSlots)))
+    }
+    if HeavyFighter {
+        ships.Set(HEAVYFIGHTER, enoughtShips(HEAVYFIGHTER, 3000 * (maxSlotsUse - usedSlots)))
+    }
+    // if ships.ByID(SMALLCARGO) <= 0 && ships.ByID(LARGECARGO) <= 0 {
+    //     LogTelegram("E", "No Caros set!")
+    //     StopScript(__FILE__)
+    // }
 }
 
 func LogTelegram(cat, message) {
@@ -469,67 +496,51 @@ func LogTelegram(cat, message) {
         case cat == "W" || cat == "w":
             LogWarn(message)
             if useTelegram {
-                SendTelegram(TELEGRAM_CHAT_ID, "Warn [" + message + "]")
+                SendTelegram(TeleID, "Warn [" + message + "]")
             }
         case cat == "I" || cat == "i":
             LogInfo(message)
             if useTelegram {
-                SendTelegram(TELEGRAM_CHAT_ID, "Info [" + message + "]")
+                SendTelegram(TeleID, "Info [" + message + "]")
             }
         case cat == "E" || cat == "e":
             LogError(message)
             if useTelegram {
-                SendTelegram(TELEGRAM_CHAT_ID, "Error [" + message + "]")
+                SendTelegram(TeleID, "Error [" + message + "]")
             }
         case cat == "D" || cat == "d":
             LogDebug(message)
         default:
             LogError("no valid entry! Message is: " + message)
             if useTelegram {
-                SendTelegram(TELEGRAM_CHAT_ID, "Error [No valid entry! Message is: " + message + "]")
+                SendTelegram(TeleID, "Error [No valid entry! Message is: " + message + "]")
             }
     }
 }
 
 func doWork(){
     LogTelegram("D", "Call function doWork()")
-    errorHandler()                                                              //checking any value error
-
-    downSys = sendFrom
-    upSys = sendTo
-
-    if !ignoreFleets {
-        LogTelegram("I", "Fleets are on the way! Wait until they are back!")
-        LogTelegram("D",  "If you don't want this! Set ignoreFleets = true")
-        customSleep(startExpo())                                                //checking fleets on going and wait until they are back 
-    }
-
-    GalaxyGet()                                                                 //get the Galaxy form home
-    
-    if hartDebris {
-        setHartDebris()                                                         //set Ships automatically or manual for get the hartest debris
-    }else {
-        shipsSet()                                                              //set Ships automatically or manual
-    }
+    boot()
     
     for {
-        fleetsGet()                                                             //get slots
-
-        setMinSecs()                                                            //set time
         
-        fleetsGet()                                                             //calc free slots again
+        fleetsGet()                                                             //calc free slots
         LogTelegram("D", "Expeditions available: " + (expoSlots - expoInUse))
         LogTelegram("D", "Slots available: " + freeSlots)
+        
+        if maxSlotsUse - usedSlots > 0 {
+            shipsSet()                                                          //set the fleet as desired
+        }
         
         doExpo()                                                                //send expo
         
         if useWave && send {                                                    //wave tactics
-            debrisSys = downSys
-            downSys = setSys() 
+            setSys() 
         }
         
         checkLoop()                                                             //checking is loop when he is finished
         
+        setMinSecs()
         customSleep(minSecs)                                                    //set sleeper
         
         sendMineDebris()                                                        //after sleep checking debris
