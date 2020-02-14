@@ -166,7 +166,7 @@ func onWayDebris(PF) {
     already = 0
     fleetsGet()
     for fleet in fleets {
-        if fleet.Destination == NewCoordinate(MyGalaxy, debrisSys, 16, DEBRIS_TYPE) && fleet.Ships.Pathfinder == 12 && !fleet.ReturnFlight {
+        if fleet.Destination == NewCoordinate(myGalaxy, debrisSys, 16, DEBRIS_TYPE) && fleet.Ships.Pathfinder == 12 && !fleet.ReturnFlight {
             onWay++
             already += fleet.Ships.Pathfinder
         }
