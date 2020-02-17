@@ -460,8 +460,8 @@ func autoSet() {
         SC = Ceil((expoValue * speed * 1.5 * 2 * 200) / (5000 * (tech.HyperspaceTechnology * 0.05) + 1))
         LC = Ceil((expoValue * speed * 1.5 * 2 * 200) / (25000 * (tech.HyperspaceTechnology * 0.05) + 1))
     }else {
-        SC = Ceil((expoValue * 2 * 200) / (5000 * (tech.HyperspaceTechnology * 0.05) + 1))
-        LC = Ceil((expoValue * 2 * 200) / (25000 * (tech.HyperspaceTechnology * 0.05) + 1))
+        SC = Ceil(expoValue / 20)
+        LC = Ceil(expoValue / 60)
     }
     ships = NewShipsInfos()
     if smallCargo {
