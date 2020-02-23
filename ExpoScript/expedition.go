@@ -3,7 +3,7 @@
  */
  
 /*
- * VERSION 1.30
+ * VERSION 1.31
  */
 
 /* DESCRIPTION
@@ -105,6 +105,14 @@ func boot() {
     startShips, err = GetCachedCelestial(home).GetShips()
     LogTelegram("D", "read out ships, for possible calculations")
     Sleep(250)
+
+    fleets, slots = GetFleets()
+
+    for fleet in fleets {
+        if fleet.Mission == EXPEDITION {
+            startShips.Add(fleet.Ships)
+        }
+    }
     
     if err != nil {
         LogTelegram("E", err)
