@@ -105,22 +105,6 @@ func boot() {
     startShips, err = GetCachedCelestial(home).GetShips()
     LogTelegram("D", "read out ships, for possible calculations")
     Sleep(250)
-
-    fleets, slots = GetFleets()
-
-    for fleet in fleets {
-        if fleet.Mission == EXPEDITION {
-            startShips.Add(fleet.Ships)
-        }
-    }
-    
-    if err != nil {
-        LogTelegram("E", err)
-        StopScript(__FILE__)
-    }else {
-        SC = Floor(startShips.SmallCargo / maxSlotsUse)
-        LC = Floor(startShips.LargeCargo / maxSlotsUse)
-    }
 }
 
 //debris functions
