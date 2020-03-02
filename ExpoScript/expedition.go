@@ -123,7 +123,7 @@ func scanGala() {
 		if err != nil {
 			LogTelegram("E", err)
 		}else {
-			if systemInfo.ExpeditionDebris.PathfindersNeeded > 0 {
+			if systemInfo.ExpeditionDebris.PathfindersNeeded > 1 {
 				LogTelegram("D", "Debris detected")
 				LogTelegram("I", "Need " + Dotify(systemInfo.ExpeditionDebris.PathfindersNeeded) + " Pathfinder")
 				DebrisInfos[systemInfo] = DebrisInfos[systemInfo]+systemInfo.ExpeditionDebris.PathfindersNeeded
