@@ -6,7 +6,7 @@
  */
  
 /*
- * VERSION 1.33
+ * VERSION 1.32
  */
 
 /* DESCRIPTION
@@ -63,10 +63,9 @@ LFandSC = true						 //true = use light fighters and small cargos / false = use 
 
 //######################################## SETTINGS END ########################################
 
-
 speed, myGalaxy, SC, LC, expoSlots, expoInUse, freeSlots, reserved, minSecs, debrisSysDown, debrisSysUp, downSys, upSys, usedSlots, usedDebris = 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 ships, tech, fleets = {},{},{}
-send, StopSending, mine = false, false, true
+send, StopSending = false, false
 
 //####################
 //# debris functions #
@@ -76,15 +75,14 @@ func doDebris() {
 	LogTelegram("D", "Call function sendMineDebris()")
 	for {
 		for info, amount in scanGala() {
-		    onTheWayDebris(info.System(), amount)
-			if mine {
+			if onTheWayDebris(info.System(), amount) {
 				LogTelegram("I", Dotify(info.ExpeditionDebris.Metal) + " metal " + Dotify(info.ExpeditionDebris.Crystal) + " crystal were found!")
 				if usedDebris < maxDebrisSlots && freeSlots > 0 {
 					f, err = sendDebris(amount, info.System())
 					if err != nil {
 						LogTelegram("E", err)
 					}else {
-						LogTelegram("I", "Pathfinder were sendet")
+						LogTelegram("D", "Pathfinder were sendet")
 						fleetsGet()
 						Sleep(Random(3,7)*1000)
 					}
@@ -135,12 +133,12 @@ func scanGala() {
 
 func onTheWayDebris(debrisSys, PathAmount) {
 	fleets, slots = GetFleets()
-	mine = true
 	for fleet in fleets {
 		if fleet.Mission == RECYCLEDEBRISFIELD && fleet.Destination == NewCoordinate(myGalaxy, debrisSys, 16, DEBRIS_TYPE) && fleet.Ships.Pathfinder == PathAmount{
-			mine = false
+			return false
 		}
 	}
+    return true
 }
 
 func sendDebris(shipCounter, debrisSys) {
