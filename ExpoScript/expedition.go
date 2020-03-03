@@ -26,7 +26,7 @@ home = "M:1:234:5"                                      //set your expo home
 radius = 0                                              //set a radius, this will be flown around your system. If radius = 0 then we only fly in your system
 rankOnePoints = 1234567890                              //how many points does the first place have
 maxExpoSlotsUse = 8                                     //how many slots should we use for fly Expos?
-maxDebrisSlots = 2					//how many slots should we use for mining Debris?
+maxDebrisSlots = 2					                    //how many slots should we use for mining Debris?
 loop = true                                             //should we fly every round again?
 expoTime = 1                                            //set duration
 useWave = true                                          //should we let everyone fly on a coordinate and only then switch? true = yes / false = no
@@ -38,7 +38,9 @@ HeavyFighter = true                                     //should add HeavyFighte
 selfShips = false                                       //assemble the ships yourself or have them calculated automatically true = self / false = automatic
 TeleID = TELEGRAM_CHAT_ID                               //you can exchange this for an ID for a possible second account (CloudHost only)
 mineDebris = true                                       //should we mine debris fields? true = yes / false = no
-endIt = {true:"21:30:00"}				//should we stop sending expedition at any time? (NinjaTime not OGameTime) mining will continue to work true = yes / false = no
+endIt = {true:"21:30:00"}				                //should we stop sending expedition at any time? (NinjaTime not OGameTime) mining will continue to work true = yes / false = no
+muchPaths = 1                                           //all debris larger than X pathfinder are removed
+expoSendTime =[3,7]                                     //sends expeditions at intervals of x seconds
 
 //Change if you are selfShipper!
 ship = {LIGHTFIGHTER : 0 ,
@@ -121,7 +123,7 @@ func scanGala() {
 		if err != nil {
 			LogTelegram("E", err)
 		}else {
-			if systemInfo.ExpeditionDebris.PathfindersNeeded > 1 {
+			if systemInfo.ExpeditionDebris.PathfindersNeeded > muchPaths {
 				LogTelegram("D", "Debris detected")
 				LogTelegram("I", "Need " + Dotify(systemInfo.ExpeditionDebris.PathfindersNeeded) + " Pathfinder")
 				DebrisInfos[systemInfo] = DebrisInfos[systemInfo]+systemInfo.ExpeditionDebris.PathfindersNeeded
@@ -174,7 +176,7 @@ func doExpo() {
 				if !useWave {
 					downSys++
 				}
-				Sleep(Random(3,7)*1000)
+				Sleep(Random(expoSendTime[1],expoSendTime[2])*1000)
 			}
 		}
 	}
