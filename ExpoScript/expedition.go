@@ -6,7 +6,7 @@
  */
  
 /*
- * VERSION 1.33
+ * VERSION 1.32
  */
 
 /* DESCRIPTION
@@ -428,10 +428,10 @@ func errorHandler(){
 		downSys = 1
 		debrisSysDown = 1
     }
-    if upSys >= 500 {
+    if upSys > SYSTEMS {
         LogTelegram("D", "Radius exceeds system limit! Set it to 499")
-		upSys = 499
-		debrisSysUp	= 499
+		upSys = SYSTEMS
+		debrisSysUp	= SYSTEMS
     }
     if rankOnePoints == 0 || rankOnePoints == nil{
         LogTelegram("E", "We do not believe that the first place has " + rankOnePoints + " points. We at least set it at our level")
@@ -506,7 +506,17 @@ func boot() {
     tech = GetResearch()
     LogTelegram("D", "Research was received")
 	Sleep(250)	
-	fleetsGet()
+    fleetsGet()
+    if expoTime <= 0 || expoTime > tech.Astrophysics || expoTime == nil{
+        LogTelegram("E", "we can not stay in expedition for " + expoTime + " hour")
+        if expoTime <= 0 || expoTime == nil {
+            LogTelegram("E", "we set it at least do 1 hour")
+            expoTime = 1
+        }else {
+            LogTelegram("E", "we set it at least do 18 hour")
+            expoTime = tech.Astrophysics
+        }
+    }
 	if maxExpoSlotsUse > expoSlots {
 		LogTelegram("E", "your astrophysics is not sufficient for so many expeditions " + maxExpoSlotsUse)
 		LogTelegram("W", "we set it to " + expoSlots)
