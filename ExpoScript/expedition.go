@@ -176,7 +176,7 @@ func doExpo() {
 				if !useWave {
 					downSys++
 				}
-				Sleep(Random(expoSendTime[1],expoSendTime[2])*1000)
+				Sleep(Random(expoSendTime[0],expoSendTime[1])*1000)
 			}
 		}
 	}
