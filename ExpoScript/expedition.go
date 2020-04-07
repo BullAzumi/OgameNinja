@@ -26,7 +26,7 @@ home = "M:1:234:5"                                      //set your expo home
 radius = 0                                              //set a radius, this will be flown around your system. If radius = 0 then we only fly in your system
 rankOnePoints = 1234567890                              //how many points does the first place have
 maxExpoSlotsUse = 8                                     //how many slots should we use for fly Expos?
-maxDebrisSlots = 2					//how many slots should we use for mining Debris?
+maxDebrisSlots = 2										//how many slots should we use for mining Debris?
 loop = true                                             //should we fly every round again?
 expoTime = 1                                            //set duration
 useWave = true                                          //should we let everyone fly on a coordinate and only then switch? true = yes / false = no
@@ -36,9 +36,12 @@ usePathfinder = true                                    //use pathfinder in auto
 useReaper = true                                        //true = use reaoer in automatically build / false = use destroyer
 HeavyFighter = true                                     //should add HeavyFighters? yes = true / no = false we would use 3.000 HeavyFighters
 selfShips = false                                       //assemble the ships yourself or have them calculated automatically true = self / false = automatic
-TeleID = TELEGRAM_CHAT_ID 				//you can exchange this for an ID for a possible second account (CloudHost only)
+TeleID = TELEGRAM_CHAT_ID                               //you can exchange this for an ID for a possible second account (CloudHost only)
 mineDebris = true                                       //should we mine debris fields? true = yes / false = no
-endIt = {true:"21:30:00"}				//should we stop sending expedition at any time? (NinjaTime not OGameTime) mining will continue to work true = yes / false = no
+endIt = {true:"21:30:00"}								//should we stop sending expedition at any time? (NinjaTime not OGameTime) mining will continue to work true = yes / false = no
+expoDelay = [3,7]                                       //sends expeditions at intervals of x seconds
+muchPaths = 1                                           //all debris larger than X pathfinder are removed
+
 //Change if you are selfShipper!
 ship = {LIGHTFIGHTER : 0 ,
         HEAVYFIGHTER : 0 ,
@@ -57,8 +60,8 @@ ship = {LIGHTFIGHTER : 0 ,
         PATHFINDER : 0}
 //########################## !!!CHANGE IT ONLY IF YOU KNOW WHAT YOU ARE DOING!!! ###########################
 
-hartDebris = true                                       //set this true do get hart Debris farm
-LFandSC = true                                         //true = use light fighters and small cargos / false = use heavy fighters and large cargos
+hartDebris = false                                       //set this true do get hart Debris farm
+LFandSC = false                                         //true = use light fighters and small cargos / false = use heavy fighters and large cargos
 
 //######################################## SETTINGS END ########################################
 
@@ -123,7 +126,7 @@ func scanGala() {
 		if err != nil {
 			LogTelegram("E", err)
 		}else {
-			if systemInfo.ExpeditionDebris.PathfindersNeeded > 1 {
+			if systemInfo.ExpeditionDebris.PathfindersNeeded > muchPaths {
 				LogTelegram("D", "Debris detected")
 				LogTelegram("I", "Need " + Dotify(systemInfo.ExpeditionDebris.PathfindersNeeded) + " Pathfinder")
 				DebrisInfos[systemInfo] = DebrisInfos[systemInfo]+systemInfo.ExpeditionDebris.PathfindersNeeded
@@ -177,7 +180,7 @@ func doExpo() {
 				if !useWave {
 					downSys++
 				}
-				Sleep(Random(3,7)*1000)
+				Sleep(Random(expoDelay[0],expoDelay[1])*1000)
 			}
 		}
 	}
