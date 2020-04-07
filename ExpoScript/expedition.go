@@ -6,7 +6,7 @@
  */
  
 /*
- * VERSION 1.32
+ * VERSION 1.34
  */
 
 /* DESCRIPTION
@@ -22,11 +22,11 @@
 //######################################## SETTINGS START ########################################
 
 
-home = "M:1:234:5"                                      //set your expo home
+home = "M:4:363:4"                                      //set your expo home
 radius = 0                                              //set a radius, this will be flown around your system. If radius = 0 then we only fly in your system
 rankOnePoints = 1234567890                              //how many points does the first place have
 maxExpoSlotsUse = 8                                     //how many slots should we use for fly Expos?
-maxDebrisSlots = 2					                    //how many slots should we use for mining Debris?
+maxDebrisSlots = 2										//how many slots should we use for mining Debris?
 loop = true                                             //should we fly every round again?
 expoTime = 1                                            //set duration
 useWave = true                                          //should we let everyone fly on a coordinate and only then switch? true = yes / false = no
@@ -36,12 +36,9 @@ usePathfinder = true                                    //use pathfinder in auto
 useReaper = true                                        //true = use reaoer in automatically build / false = use destroyer
 HeavyFighter = true                                     //should add HeavyFighters? yes = true / no = false we would use 3.000 HeavyFighters
 selfShips = false                                       //assemble the ships yourself or have them calculated automatically true = self / false = automatic
-TeleID = TELEGRAM_CHAT_ID                               //you can exchange this for an ID for a possible second account (CloudHost only)
+TeleID = 972703840                                      //you can exchange this for an ID for a possible second account (CloudHost only)
 mineDebris = true                                       //should we mine debris fields? true = yes / false = no
-endIt = {true:"21:30:00"}				                //should we stop sending expedition at any time? (NinjaTime not OGameTime) mining will continue to work true = yes / false = no
-muchPaths = 1                                           //all debris larger than X pathfinder are removed
-expoSendTime =[3,7]                                     //sends expeditions at intervals of x seconds
-
+endIt = {true:"21:30:00"}								//should we stop sending expedition at any time? (NinjaTime not OGameTime) mining will continue to work true = yes / false = no
 //Change if you are selfShipper!
 ship = {LIGHTFIGHTER : 0 ,
         HEAVYFIGHTER : 0 ,
@@ -60,14 +57,16 @@ ship = {LIGHTFIGHTER : 0 ,
         PATHFINDER : 0}
 //########################## !!!CHANGE IT ONLY IF YOU KNOW WHAT YOU ARE DOING!!! ###########################
 
-hartDebris = false                                       //set this true do get hart Debris farm
-LFandSC = true						 //true = use light fighters and small cargos / false = use heavy fighters and large cargos
+hartDebris = true                                       //set this true do get hart Debris farm
+LFandSC = true                                         //true = use light fighters and small cargos / false = use heavy fighters and large cargos
 
 //######################################## SETTINGS END ########################################
+
 
 speed, myGalaxy, SC, LC, expoSlots, expoInUse, freeSlots, reserved, minSecs, debrisSysDown, debrisSysUp, downSys, upSys, usedSlots, usedDebris = 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 ships, tech, fleets = {},{},{}
 send, StopSending = false, false
+fleetIDList = []
 
 //####################
 //# debris functions #
@@ -76,25 +75,26 @@ send, StopSending = false, false
 func doDebris() {
 	LogTelegram("D", "Call function sendMineDebris()")
 	for {
-		for info, amount in scanGala() {
-			if onTheWayDebris(info.System(), amount) {
-				LogTelegram("I", Dotify(info.ExpeditionDebris.Metal) + " metal " + Dotify(info.ExpeditionDebris.Crystal) + " crystal were found!")
-				if usedDebris < maxDebrisSlots && freeSlots > 0 {
-					f, err = sendDebris(amount, info.System())
-					if err != nil {
-						LogTelegram("E", err)
-					}else {
-						LogTelegram("D", "Pathfinder were sendet")
-						fleetsGet()
-						Sleep(Random(3,7)*1000)
-					}
-				}else {
-					fleetsGet()
-				}
-			}
-		}
-		customSleep(DebrisInterval(), "doDebris")
-	}
+        for info, amount in scanGala() {
+            if onTheWayDebris(info.System(), amount) {
+                LogTelegram("I", Dotify(info.ExpeditionDebris.Metal) + " metal " + Dotify(info.ExpeditionDebris.Crystal) + " crystal were found!")
+                if usedDebris < maxDebrisSlots && freeSlots > 0 {
+                    f, err = sendDebris(amount, info.System())
+                    if err != nil {
+                        LogTelegram("E", err)
+                    }else {
+                        LogTelegram("D", "Pathfinder were sendet")
+                        fleetIDList += f
+                        fleetsGet()
+                        Sleep(Random(3,7)*1000)
+                    }
+                }else {
+                    fleetsGet()
+                }
+            }
+        }
+        customSleep(DebrisInterval(), "doDebris")
+    }
 }
 
 func DebrisInterval() {
@@ -123,7 +123,7 @@ func scanGala() {
 		if err != nil {
 			LogTelegram("E", err)
 		}else {
-			if systemInfo.ExpeditionDebris.PathfindersNeeded > muchPaths {
+			if systemInfo.ExpeditionDebris.PathfindersNeeded > 1 {
 				LogTelegram("D", "Debris detected")
 				LogTelegram("I", "Need " + Dotify(systemInfo.ExpeditionDebris.PathfindersNeeded) + " Pathfinder")
 				DebrisInfos[systemInfo] = DebrisInfos[systemInfo]+systemInfo.ExpeditionDebris.PathfindersNeeded
@@ -171,12 +171,13 @@ func doExpo() {
 				break
 			}else{
 				LogTelegram("I", "Fleet starts on the expedition! " + newFleet)
+                fleetIDList += newFleet
 				fleetsGet()
-				send = true
+                send = true
 				if !useWave {
 					downSys++
 				}
-				Sleep(Random(expoSendTime[0],expoSendTime[1])*1000)
+				Sleep(Random(3,7)*1000)
 			}
 		}
 	}
@@ -198,19 +199,19 @@ func sendExpo() {
 func doAll() {
 	for {
 		if !StopSending {
-			fleetsGet()                                                             
-			LogTelegram("D", "Expeditions available: " + (expoSlots - expoInUse))
-			LogTelegram("D", "Slots available: " + freeSlots)
-			if maxExpoSlotsUse - usedSlots > 0 {
-				shipsSet()
-			}
-			doExpo()
-			if useWave && send {
-				downSys++
-			}
-			checkLoop()   
-			setMinSecs()
-			customSleep(minSecs, "doExpo")
+            fleetsGet()                                                             
+            LogTelegram("D", "Expeditions available: " + (expoSlots - expoInUse))
+            LogTelegram("D", "Slots available: " + freeSlots)
+            if maxExpoSlotsUse - usedSlots > 0 {
+                shipsSet()
+            }
+            doExpo()
+            if useWave && send {
+                downSys++
+            }
+            checkLoop()   
+            setMinSecs()
+            customSleep(minSecs, "doExpo")
 		}
 	}
 }
@@ -372,6 +373,19 @@ func autoSet() {
 //# other Functions #
 //###################
 
+func makeBreak(infos){
+    for {
+        for info in infos{
+            customSleep(info, "takeABreak")
+            if !breakBool {
+                breakBool = true
+            }else {
+                breakBool = false
+            }
+        }
+    }
+}
+
 func setMinSecs() {
     LogTelegram("D", "Call function setMinSecs()")
     minSecs = 999999999
@@ -402,15 +416,22 @@ func fleetsGet() {
     expoSlots = slots.ExpTotal
     expoInUse = slots.ExpInUse
 	freeSlots = slots.Total - slots.InUse - reserved
-	usedDebris, usedSlots = 0,0
-    for fleet in fleets {
-        if fleet.Mission == EXPEDITION {
-            usedSlots++
-		}
-		if fleet.Mission == RECYCLEDEBRISFIELD && fleet.Destination.Position == 16 {
-			usedDebris++
-		}
+    usedDebris, usedSlots = 0,0
+    if len(fleetIDList) > 0 {
+        for fleet in fleets {
+            for fleetID in fleetIDList {
+                if fleet.ID == fleetID.ID {
+                    if fleet.Mission == EXPEDITION {
+                        usedSlots++
+                    }
+                    if fleet.Mission == RECYCLEDEBRISFIELD && fleet.Destination.Position == 16 {
+                        usedDebris++
+                    }
+                }
+            }
+        }
     }
+    Put("ExposDone", howMuchExpos())
 }
 
 func errorHandler(){
@@ -430,10 +451,10 @@ func errorHandler(){
 		downSys = 1
 		debrisSysDown = 1
     }
-    if upSys > SYSTEMS {
+    if upSys >= 500 {
         LogTelegram("D", "Radius exceeds system limit! Set it to 499")
-		upSys = SYSTEMS
-		debrisSysUp	= SYSTEMS
+		upSys = 499
+		debrisSysUp	= 499
     }
     if rankOnePoints == 0 || rankOnePoints == nil{
         LogTelegram("E", "We do not believe that the first place has " + rankOnePoints + " points. We at least set it at our level")
@@ -465,30 +486,28 @@ func errorHandler(){
     }
 }
 
+func sendTelegramIfActive(msg) {
+	if useTelegram {
+		SendTelegram(TeleID, msg)
+	}
+}
+
 func LogTelegram(cat, message) {
     switch cat {
         case cat == "W" || cat == "w":
             LogWarn(message)
-            if useTelegram {
-                SendTelegram(TeleID, "Warn [" + message + "]")
-            }
+            sendTelegramIfActive("Warn [" + message + "]")
         case cat == "I" || cat == "i":
             LogInfo(message)
-            if useTelegram {
-                SendTelegram(TeleID, "Info [" + message + "]")
-            }
+            sendTelegramIfActive("Info [" + message + "]")
         case cat == "E" || cat == "e":
             LogError(message)
-            if useTelegram {
-                SendTelegram(TeleID, "Error [" + message + "]")
-            }
+            sendTelegramIfActive("Error [" + message + "]")
         case cat == "D" || cat == "d":
             LogDebug(message)
         default:
             LogError("no valid entry! Message is: " + message)
-            if useTelegram {
-                SendTelegram(TeleID, "Error [No valid entry! Message is: " + message + "]")
-            }
+            sendTelegramIfActive("Error [No valid entry! Message is: " + message + "]")
     }
 }
 
@@ -508,17 +527,7 @@ func boot() {
     tech = GetResearch()
     LogTelegram("D", "Research was received")
 	Sleep(250)	
-    fleetsGet()
-    if expoTime <= 0 || expoTime > tech.Astrophysics || expoTime == nil{
-        LogTelegram("E", "we can not stay in expedition for " + expoTime + " hour")
-        if expoTime <= 0 || expoTime == nil {
-            LogTelegram("E", "we set it at least do 1 hour")
-            expoTime = 1
-        }else {
-            LogTelegram("E", "we set it at least do 18 hour")
-            expoTime = tech.Astrophysics
-        }
-    }
+	fleetsGet()
 	if maxExpoSlotsUse > expoSlots {
 		LogTelegram("E", "your astrophysics is not sufficient for so many expeditions " + maxExpoSlotsUse)
 		LogTelegram("W", "we set it to " + expoSlots)
@@ -536,9 +545,20 @@ func boot() {
     }
 }
 
+func howMuchExpos(){
+    muchExpos = 0
+    for fleet in fleetIDList {
+        if fleet.Mission == EXPEDITION {
+            muchExpos++
+        }
+    }
+    return muchExpos
+}
+
 func doWork(){
     LogTelegram("D", "Call function doWork()")
-	boot()
+    boot()
+    info = []
 	if mineDebris {
 		ExecIn(0, doDebris)
 	}
@@ -546,7 +566,8 @@ func doWork(){
 	for isBool, time in endIt {
 		if isBool {
 			ExecAt(time, func() {
-				LogTelegram("I", "Now we are stop to sending Expeditions.") 
+                LogTelegram("I", "Now we are stop to sending Expeditions.")
+                LogTelegram("I", "today we have completed " + howMuchExpos + " expeditions") 
 				StopSending = true})
 		}
 	}
